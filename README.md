@@ -4,7 +4,7 @@ Usage:
 //contact S+ to get token endpoint
 //TODO using open id discovery
 String endpoint = "https://api.devtest.newsplus.se/v1/oauth2";
-SplusOpenIdClient client = new SplusOpenIdClient("endpoint");
+SplusOpenIdClient client = new SplusOpenIdClient(endpoint);
 try {
     OAuth2Response response = client.requestAccessToken(String clientId,
             String clientSecret,
