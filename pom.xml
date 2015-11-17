@@ -9,6 +9,32 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
+    <name>Bonnier OpenId Client</name>
+    <description>Provide support to connect to Bonnier OpenId API.</description>
+    <url>https://github.com/viet-nguyenquoc-niteco/openid-client</url>
+
+    <scm>
+        <connection>scm:git:git@github.com:viet-nguyenquoc-niteco/openid-client.git</connection>
+        <developerConnection>scm:git:git@github.com:viet-nguyenquoc-niteco/openid-client.git</developerConnection>
+        <url>scm:git:https://github.com/viet-nguyenquoc-niteco/openid-client</url>
+    </scm>
+
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Nguyen Quoc Viet</name>
+            <email>vietnq69@gmail.com</email>
+            <organization>Niteco</organization>
+            <organizationUrl>http://www.niteco.com</organizationUrl>
+        </developer>
+    </developers>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jersey.version>1.12</jersey.version>

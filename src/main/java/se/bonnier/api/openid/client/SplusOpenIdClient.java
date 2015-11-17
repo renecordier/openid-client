@@ -14,12 +14,12 @@ import javax.ws.rs.core.MediaType;
 /**
  * @author vietnq
  */
-public class OpenIdClient {
-    private static final Logger LOGGER = LoggerFactory.getLogger(OpenIdClient.class);
+public class SplusOpenIdClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SplusOpenIdClient.class);
 
     private WebResource resource;
 
-    public OpenIdClient(String endpoint) {
+    public SplusOpenIdClient(String endpoint) {
 
         LOGGER.debug("OAuth2 endpoint " + endpoint);
 
@@ -27,6 +27,17 @@ public class OpenIdClient {
         resource = client.resource(endpoint);
     }
 
+    /**
+     * Requests access token from Bonnier Identity Provider using authorization code
+     * @param clientId S+ client Id
+     * @param clientSecret S+ client secret
+     * @param scope OpenId scope
+     * @param grantType must be set to authorization_code
+     * @param code the code received in authorization code flow
+     * @param redirectURI the redirect uri registered
+     * @return OAuth2Response object
+     * @throws BonnierOpenIdException
+     */
     public OAuth2Response requestAccessToken(String clientId,
                                              String clientSecret,
                                              String scope,
