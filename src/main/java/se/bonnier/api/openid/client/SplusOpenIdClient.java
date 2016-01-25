@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.bonnier.api.openid.exceptions.BonnierOpenIdException;
 import se.bonnier.api.openid.response.OAuth2Response;
+import se.bonnier.api.openid.util.JwsUtil;
 
 import javax.ws.rs.core.MediaType;
 
@@ -18,6 +19,7 @@ public class SplusOpenIdClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(SplusOpenIdClient.class);
 
     private WebResource resource;
+    private JwsUtil jwsUtil;
 
     public SplusOpenIdClient(String endpoint) {
 
@@ -25,6 +27,7 @@ public class SplusOpenIdClient {
 
         Client client = Client.create();
         resource = client.resource(endpoint);
+        jwsUtil = new JwsUtil(resource.path("/keys").getURI().toString());
     }
 
     /**
@@ -43,7 +46,8 @@ public class SplusOpenIdClient {
                                              String scope,
                                              String grantType,
                                              String code,
-                                             String redirectURI) throws BonnierOpenIdException {
+                                             String redirectURI,
+                                             Boolean longLivedToken) throws BonnierOpenIdException {
         OAuth2Response oauthResponse = null;
 
         try {
@@ -59,6 +63,9 @@ public class SplusOpenIdClient {
             if (code != null) {
                 form.add("code", code);
             }
+
+            form.add("long_lived_token",longLivedToken.toString());
+
             WebResource.Builder builder = resource.path("/token").accept(MediaType.APPLICATION_JSON);
             oauthResponse = builder.post(OAuth2Response.class, form);
         } catch (Exception ex) {
@@ -73,5 +80,9 @@ public class SplusOpenIdClient {
             }
         }
         return oauthResponse;
+    }
+
+    public ClaimsSet verifyIdToken(String idToken, String clientId) {
+        return jwsUtil.verifyContent(idToken, clientId, resource.path("/keys").getURI().toString());
     }
 }
