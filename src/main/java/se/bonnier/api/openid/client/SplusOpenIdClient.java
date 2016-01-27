@@ -35,6 +35,12 @@ public class SplusOpenIdClient {
         jwsUtil = new JwsUtil(resource.path("/keys").getURI().toString());
     }
 
+    public SplusOpenIdClient(String endpoint, String clientId, String clientSecret) {
+        this(endpoint);
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
+    }
+
     protected String accessToken() {
         if (oAuth2Response == null || expireTime <= System.currentTimeMillis()) {
             try {
