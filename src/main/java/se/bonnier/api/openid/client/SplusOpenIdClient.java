@@ -106,6 +106,62 @@ public class SplusOpenIdClient {
         return oauthResponse;
     }
 
+    /**
+     * Requests access token from Bonnier Identity Provider using password grant type flow
+     * @param clientId S+ client Id
+     * @param clientSecret S+ client secret
+     * @param scope OpenId scope
+     * @param grantType must be set to password
+     * @param username user name credentials
+     * @param password password credentials
+     * @param longLivedToken long lived token or not
+     * @return OAuth2Response object
+     * @throws BonnierOpenIdException
+     */
+    public OAuth2Response requestAccessTokenWithPasswordFlow(String clientId,
+                                             String clientSecret,
+                                             String scope,
+                                             String grantType,
+                                             String username,
+                                             String password,
+                                             Boolean longLivedToken) throws BonnierOpenIdException {
+        OAuth2Response oauthResponse = null;
+
+        try {
+            Form form = new Form();
+            if(clientId != null) {
+                form.add("client_id", clientId);
+            }
+            if (clientSecret != null) {
+                form.add("client_secret", clientSecret);
+            }
+            if (scope != null) {
+                form.add("scope", scope);
+            }
+            form.add("grant_type", grantType);
+            form.add("username", username);
+            form.add("password", password);
+            form.add("long_lived_token",longLivedToken.toString());
+
+            WebResource.Builder builder = resource.path("/token").accept(MediaType.APPLICATION_JSON);
+            if(clientId == null || clientSecret == null) {
+                builder.header("Authorization", "Bearer " + accessToken());
+            }
+            oauthResponse = builder.post(OAuth2Response.class, form);
+        } catch (Exception ex) {
+            OAuth2Response entity = ((UniformInterfaceException) ex).getResponse().getEntity(OAuth2Response.class);
+            switch (entity.errorCode) {
+                case CLIENT_ACTIVATION_PERIOD_EXPIRED:
+                case UNAUTHORIZED:
+                case INVALID_REQUEST:
+                    throw new BonnierOpenIdException(entity.errorMsg);
+                default:
+                    throw new BonnierOpenIdException(ex);
+            }
+        }
+        return oauthResponse;
+    }
+
     public OAuth2Response refreshAccessToken(String refreshToken, String scope) throws BonnierOpenIdException {
         OAuth2Response oauthResponse = null;
 
