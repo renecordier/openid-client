@@ -6,17 +6,17 @@
 
     <groupId>se.bonnier.api</groupId>
     <artifactId>openid-client</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Bonnier OpenId Client</name>
     <description>Provide support to connect to Bonnier OpenId API.</description>
-    <url>https://github.com/viet-nguyenquoc-niteco/openid-client</url>
+    <url>https://github.com/renecordier/openid-client</url>
 
     <scm>
-        <connection>scm:git:git@github.com:viet-nguyenquoc-niteco/openid-client.git</connection>
-        <developerConnection>scm:git:git@github.com:viet-nguyenquoc-niteco/openid-client.git</developerConnection>
-        <url>scm:git:https://github.com/viet-nguyenquoc-niteco/openid-client</url>
+        <connection>scm:git:git@github.com:renecordier/openid-client.git</connection>
+        <developerConnection>scm:git:git@github.com:renecordier/openid-client.git</developerConnection>
+        <url>scm:git:https://github.com/renecordier/openid-client</url>
     </scm>
 
     <licenses>
@@ -30,6 +30,12 @@
         <developer>
             <name>Nguyen Quoc Viet</name>
             <email>vietnq69@gmail.com</email>
+            <organization>Niteco</organization>
+            <organizationUrl>http://www.niteco.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Cordier Rene</name>
+            <email>rene.cordier@niteco.se</email>
             <organization>Niteco</organization>
             <organizationUrl>http://www.niteco.com</organizationUrl>
         </developer>

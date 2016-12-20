@@ -109,7 +109,6 @@ public class SplusOpenIdClient {
     /**
      * Requests access token from Bonnier Identity Provider using password grant type flow
      * @param clientId S+ client Id
-     * @param clientSecret S+ client secret
      * @param scope OpenId scope
      * @param grantType must be set to password
      * @param username user name credentials
@@ -119,7 +118,6 @@ public class SplusOpenIdClient {
      * @throws BonnierOpenIdException
      */
     public OAuth2Response requestAccessTokenWithPasswordFlow(String clientId,
-                                             String clientSecret,
                                              String scope,
                                              String grantType,
                                              String username,
@@ -131,9 +129,6 @@ public class SplusOpenIdClient {
             Form form = new Form();
             if(clientId != null) {
                 form.add("client_id", clientId);
-            }
-            if (clientSecret != null) {
-                form.add("client_secret", clientSecret);
             }
             if (scope != null) {
                 form.add("scope", scope);
