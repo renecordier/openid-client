@@ -139,7 +139,7 @@ public class SplusOpenIdClient {
             form.add("long_lived_token",longLivedToken.toString());
 
             WebResource.Builder builder = resource.path("/token").accept(MediaType.APPLICATION_JSON);
-            if(clientId == null || clientSecret == null) {
+            if(clientId == null) {
                 builder.header("Authorization", "Bearer " + accessToken());
             }
             oauthResponse = builder.post(OAuth2Response.class, form);
