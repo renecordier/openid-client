@@ -45,7 +45,7 @@ public class SplusOpenIdClient {
         if (oAuth2Response == null || expireTime <= System.currentTimeMillis()) {
             try {
                 expireTime = System.currentTimeMillis();
-                oAuth2Response = requestAccessToken(clientId, clientSecret, "openid", "client_credentials", "", "", false);
+                oAuth2Response = requestAccessToken(clientId, clientSecret, "openid", "client_credentials", "", "", false, null);
                 expireTime += oAuth2Response.expiresIn * 1000L;
             } catch (Exception e) {
                 LOGGER.info("Can not create new client access token", e);
@@ -62,6 +62,8 @@ public class SplusOpenIdClient {
      * @param grantType must be set to authorization_code
      * @param code the code received in authorization code flow
      * @param redirectURI the redirect uri registered
+     * @param longLivedToken if token is long lived (30d) or not (8h)
+     * @param codeVerifier used for PKCE concept (in case client cannot store a secret)
      * @return OAuth2Response object
      * @throws BonnierOpenIdException
      */
@@ -71,7 +73,8 @@ public class SplusOpenIdClient {
                                              String grantType,
                                              String code,
                                              String redirectURI,
-                                             Boolean longLivedToken) throws BonnierOpenIdException {
+                                             Boolean longLivedToken,
+                                             String codeVerifier) throws BonnierOpenIdException {
         OAuth2Response oauthResponse = null;
 
         try {
@@ -86,6 +89,9 @@ public class SplusOpenIdClient {
             }
             if (code != null) {
                 form.add("code", code);
+            }
+            if(codeVerifier != null){
+                form.add("code_verifier", codeVerifier);
             }
 
             form.add("long_lived_token",longLivedToken.toString());
