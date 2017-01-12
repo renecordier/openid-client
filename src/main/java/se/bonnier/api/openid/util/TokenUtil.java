@@ -2,8 +2,8 @@ package se.bonnier.api.openid.util;
 
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import se.bonnier.api.openid.client.ClaimsSet;
-import se.bonnier.api.openid.client.IdTokenClaimsSet;
+import se.bonnier.api.openid.entity.ClaimsSet;
+import se.bonnier.api.openid.entity.IdTokenClaimsSet;
 
 import java.text.ParseException;
 

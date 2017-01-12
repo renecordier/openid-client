@@ -9,7 +9,7 @@ import org.jose4j.jwt.consumer.JwtConsumer;
 import org.jose4j.jwt.consumer.JwtConsumerBuilder;
 import org.jose4j.keys.resolvers.HttpsJwksVerificationKeyResolver;
 import org.jose4j.lang.JoseException;
-import se.bonnier.api.openid.client.ClaimsSet;
+import se.bonnier.api.openid.entity.ClaimsSet;
 
 import java.security.PublicKey;
 

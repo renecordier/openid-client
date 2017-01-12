@@ -1,4 +1,4 @@
-package se.bonnier.api.openid.client;
+package se.bonnier.api.openid.entity;
 
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;

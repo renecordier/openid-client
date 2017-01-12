@@ -1,4 +1,4 @@
-package se.bonnier.api.openid.client;
+package se.bonnier.api.openid.util;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
