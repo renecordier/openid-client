@@ -32,6 +32,15 @@ public class BipAuthorizationCodeFlowClient extends SplusOpenIdClient {
         return url;
     }
 
+    public String getLogoutUrl(String authorizationRequestUri, String appId, String postLogoutRedirectUri, String state) {
+        String url = authorizationRequestUri;
+        url += "?post_logout_redirect_uri=" + postLogoutRedirectUri;
+        url += "&appId=" + appId;
+        url += state != null ? "&state=" + state : "";
+
+        return url;
+    }
+
     /**
      * Requests access token from Bonnier Identity Provider using authorization code
      * @param clientId S+ client Id

@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.bonnier.api.openid.client.BipAuthorizationCodeFlowClient;
 import se.bonnier.api.openid.entity.ClaimsSet;
+import se.bonnier.api.openid.entity.OAuthAuthorizationRequestAccessType;
 import se.bonnier.api.openid.exceptions.BonnierOpenIdException;
 import se.bonnier.api.openid.response.OAuth2Response;
 import se.bonnier.api.openid.util.SplusUtil;
@@ -35,15 +36,18 @@ public class AuthorizationCodeFlow {
 
     private static BipAuthorizationCodeFlowClient ssoClient;
     private static String authorizationRequestUri;
+    private static String logoutRequestUri;
     private static String clientId;
     private static String clientSecret;
     private static String scope;
     private static String redirectUri;
+    private static String postLogoutRedirectUri;
     private static String accountId;
-    private static boolean longLivedToken;
     private static String state;
 
     private static String accessToken;
+    private static String firstname;
+    private static String lastname;
 
     public static void main( String[] args) throws Exception {
         readConfigFile();
@@ -52,11 +56,14 @@ public class AuthorizationCodeFlow {
         clientId = props.getProperty("bip.client.id");
         clientSecret = props.getProperty("bip.client.secret");
         redirectUri = props.getProperty("bip.redirect.uri");
+        postLogoutRedirectUri = props.getProperty("bip.post.logout.redirect.uri");
         authorizationRequestUri = props.getProperty("bip.authorization.request.uri");
+        logoutRequestUri = props.getProperty("bip.logout.request.uri");
 
         accountId = "74SiK5PSzADFjeZ0CXJWTM";
         scope = "openid email profile appId:di.se";
-        longLivedToken = true;
+
+        accessToken = firstname = lastname = null;
 
         if(clientId.equals("ENTER_HERE") || clientSecret.equals("ENTER_HERE")) {
             LOGGER.error("Please fill the needed values in the configuration file (src/main/resources/authorizationcodeflow.conf) given by S+ team after " +
@@ -97,11 +104,13 @@ public class AuthorizationCodeFlow {
         Server server = new Server(localServerPort);
         ContextHandler contextRoot = new ContextHandler("/");
         contextRoot.setHandler(new RootPage());
-        ContextHandler contextHandler = new ContextHandler("/bipHandler");
-        contextHandler.setHandler(new BipHandler());
+        ContextHandler contextBipHandler = new ContextHandler("/bipHandler");
+        contextBipHandler.setHandler(new BipHandler());
+        ContextHandler contextLogout = new ContextHandler("/bipLogout");
+        contextLogout.setHandler(new BipLogout());
 
         ContextHandlerCollection contexts = new ContextHandlerCollection();
-        contexts.setHandlers(new Handler[] { contextRoot, contextHandler });
+        contexts.setHandlers(new Handler[] { contextRoot, contextBipHandler, contextLogout });
         server.setHandler(contexts);
 
         return server;
@@ -111,12 +120,19 @@ public class AuthorizationCodeFlow {
         @Override
         public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
             state = SplusUtil.createOpenIdState();
-
-            String url = ssoClient.getAuthorizeUrl(authorizationRequestUri, clientId, redirectUri, scope, state,
-                    null, null, "sv", null, null);
-
-            response.setContentLength(0);
-            response.sendRedirect(url);
+            response.setContentType("text/html; charset=utf-8");
+            response.setStatus(HttpServletResponse.SC_OK);
+            PrintWriter out = response.getWriter();
+            if(accessToken == null) {
+                String loginUrl = ssoClient.getAuthorizeUrl(authorizationRequestUri, clientId, redirectUri, scope, state,
+                        null, null, "sv", null, null);
+                out.println("<h2>Welcome !</h2>");
+                out.println("You are not logged in yet ! Please click <a href='" + loginUrl + "'>here</a> to login");
+            } else {
+                String logoutUrl = ssoClient.getLogoutUrl(logoutRequestUri, "di.se", postLogoutRedirectUri, state);
+                out.println("<h2>Welcome " + firstname + " " + lastname + " !</h2>");
+                out.println("You are logged in ! Click <a href='" + logoutUrl + "'>here</a> to logout.");
+            }
 
             baseRequest.setHandled(true);
         }
@@ -135,11 +151,17 @@ public class AuthorizationCodeFlow {
                 String code = request.getParameter("code");
                 if (code != null) {
                     try {
+                        String accessType = request.getParameter("access_type");
+                        boolean longLivedToken = false;
+                        if(accessType != null && accessType.equals(OAuthAuthorizationRequestAccessType.REMEMBER.toString())){
+                            longLivedToken = true;
+                        }
+
                         OAuth2Response result = ssoClient.requestAccessToken(clientId,
                                 clientSecret,
                                 code,
                                 redirectUri,
-                                longLivedToken, //accessType
+                                longLivedToken,
                                 null);
 
                         LOGGER.debug("Success getting access token : " + result.accessToken);
@@ -154,9 +176,12 @@ public class AuthorizationCodeFlow {
 
                         LOGGER.debug("ID token : {accountId:" + accountId + ",firstName:" + firstName + ",lastName:" + lastName + "}");
 
-                        response.setStatus(HttpServletResponse.SC_OK);
-                        PrintWriter out = response.getWriter();
-                        out.println("<b>Access token</b> : " + result.accessToken);
+                        accessToken = result.accessToken;
+                        firstname = firstName;
+                        lastname = lastName;
+
+                        response.setContentLength(0);
+                        response.sendRedirect("http://localhost:" + localServerPort);
                     } catch (BonnierOpenIdException e) {
                         LOGGER.error("Error Bonnier OpenId exception : " + e.getMessage());
                         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -167,7 +192,25 @@ public class AuthorizationCodeFlow {
                 } else {
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 }
-                baseRequest.setHandled(true);
+            }
+            baseRequest.setHandled(true);
+        }
+    }
+
+    public static class BipLogout extends AbstractHandler {
+        @Override
+        public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+            String returnState = request.getParameter("state");
+            if (returnState == null || !returnState.equals(state)) {
+                LOGGER.error("Error ! State doesn't match !");
+                response.setContentType("text/html; charset=utf-8");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            } else {
+                accessToken = firstname = lastname = null;
+                LOGGER.info("User logout successful !");
+
+                response.setContentLength(0);
+                response.sendRedirect("http://localhost:" + localServerPort);
             }
         }
     }
