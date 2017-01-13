@@ -46,6 +46,7 @@ public class AuthorizationCodeFlow {
     private static String state;
 
     private static String accessToken;
+    private static String refreshToken;
     private static String firstname;
     private static String lastname;
 
@@ -63,7 +64,7 @@ public class AuthorizationCodeFlow {
         accountId = "74SiK5PSzADFjeZ0CXJWTM";
         scope = "openid email profile appId:di.se";
 
-        accessToken = firstname = lastname = null;
+        accessToken = firstname = lastname = refreshToken = null;
 
         if(clientId.equals("ENTER_HERE") || clientSecret.equals("ENTER_HERE")) {
             LOGGER.error("Please fill the needed values in the configuration file (src/main/resources/authorizationcodeflow.conf) given by S+ team after " +
@@ -108,9 +109,11 @@ public class AuthorizationCodeFlow {
         contextBipHandler.setHandler(new BipHandler());
         ContextHandler contextLogout = new ContextHandler("/bipLogout");
         contextLogout.setHandler(new BipLogout());
+        ContextHandler contextRefreshToken = new ContextHandler("/bipRefresh");
+        contextRefreshToken.setHandler(new BipRefreshToken());
 
         ContextHandlerCollection contexts = new ContextHandlerCollection();
-        contexts.setHandlers(new Handler[] { contextRoot, contextBipHandler, contextLogout });
+        contexts.setHandlers(new Handler[] { contextRoot, contextBipHandler, contextLogout, contextRefreshToken });
         server.setHandler(contexts);
 
         return server;
@@ -124,14 +127,15 @@ public class AuthorizationCodeFlow {
             response.setStatus(HttpServletResponse.SC_OK);
             PrintWriter out = response.getWriter();
             if(accessToken == null) {
-                String loginUrl = ssoClient.getAuthorizeUrl(authorizationRequestUri, clientId, redirectUri, scope, state,
-                        null, null, "sv", null, null);
+                String loginUrl = ssoClient.getAuthorizeUrl(authorizationRequestUri, clientId, redirectUri,
+                        scope, state, null, null, "sv", null, null);
                 out.println("<h2>Welcome !</h2>");
-                out.println("You are not logged in yet ! Please click <a href='" + loginUrl + "'>here</a> to login");
+                out.println("<p>You are not logged in yet ! Please click <a href='" + loginUrl + "'>here</a> to login</p>");
             } else {
                 String logoutUrl = ssoClient.getLogoutUrl(logoutRequestUri, "di.se", postLogoutRedirectUri, state);
                 out.println("<h2>Welcome " + firstname + " " + lastname + " !</h2>");
-                out.println("You are logged in ! Click <a href='" + logoutUrl + "'>here</a> to logout.");
+                out.println("<p>You are logged in ! Click <a href='" + logoutUrl + "'>here</a> to logout.</p>");
+                out.println("<p>To refresh token : click <a href='http://localhost:" + localServerPort + "/bipRefresh'>here</a> !</p>");
             }
 
             baseRequest.setHandled(true);
@@ -161,8 +165,7 @@ public class AuthorizationCodeFlow {
                                 clientSecret,
                                 code,
                                 redirectUri,
-                                longLivedToken,
-                                null);
+                                longLivedToken);
 
                         LOGGER.debug("Success getting access token : " + result.accessToken);
                         LOGGER.debug("Token type : " + result.tokenType);
@@ -177,6 +180,7 @@ public class AuthorizationCodeFlow {
                         LOGGER.debug("ID token : {accountId:" + accountId + ",firstName:" + firstName + ",lastName:" + lastName + "}");
 
                         accessToken = result.accessToken;
+                        refreshToken = result.refreshToken;
                         firstname = firstName;
                         lastname = lastName;
 
@@ -206,11 +210,35 @@ public class AuthorizationCodeFlow {
                 response.setContentType("text/html; charset=utf-8");
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             } else {
-                accessToken = firstname = lastname = null;
+                accessToken = firstname = lastname = refreshToken = null;
                 LOGGER.info("User logout successful !");
 
                 response.setContentLength(0);
                 response.sendRedirect("http://localhost:" + localServerPort);
+            }
+        }
+    }
+
+    public static class BipRefreshToken extends AbstractHandler {
+        @Override
+        public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+            LOGGER.info("Init refresh token !");
+
+            try {
+                OAuth2Response oauth2Response = ssoClient.refreshAccessToken(refreshToken, null);
+                accessToken = oauth2Response.accessToken;
+
+                LOGGER.debug("Success refreshing to new access token : " + oauth2Response.accessToken);
+
+                LOGGER.info("End refresh token !");
+                response.setContentLength(0);
+                response.sendRedirect("http://localhost:" + localServerPort);
+            } catch (BonnierOpenIdException e) {
+                LOGGER.error("Error Bonnier OpenId exception : " + e.getMessage());
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            } catch (Exception e) {
+                LOGGER.error("Error exception : " + e.getMessage());
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             }
         }
     }

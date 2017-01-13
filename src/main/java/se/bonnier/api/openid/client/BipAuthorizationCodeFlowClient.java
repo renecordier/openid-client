@@ -1,17 +1,13 @@
 package se.bonnier.api.openid.client;
 
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.representation.Form;
 import se.bonnier.api.openid.exceptions.BonnierOpenIdException;
 import se.bonnier.api.openid.response.OAuth2Response;
-
-import javax.ws.rs.core.MediaType;
 
 /**
  * Created by rene on 11/01/17.
  */
 public class BipAuthorizationCodeFlowClient extends SplusOpenIdClient {
+
     public BipAuthorizationCodeFlowClient(String endpoint, String clientId, String clientSecret) {
         super(endpoint, clientId, clientSecret);
     }
@@ -48,7 +44,6 @@ public class BipAuthorizationCodeFlowClient extends SplusOpenIdClient {
      * @param code the code received in authorization code flow
      * @param redirectURI the redirect uri registered
      * @param longLivedToken if token is long lived (30d) or not (8h)
-     * @param codeVerifier used for PKCE concept (in case client cannot store a secret)
      * @return OAuth2Response object
      * @throws se.bonnier.api.openid.exceptions.BonnierOpenIdException
      */
@@ -56,36 +51,29 @@ public class BipAuthorizationCodeFlowClient extends SplusOpenIdClient {
                                              String clientSecret,
                                              String code,
                                              String redirectURI,
+                                             Boolean longLivedToken) throws BonnierOpenIdException {
+        return apiClient.requestAccessTokenFromCode(clientId, clientSecret, code, redirectURI, longLivedToken);
+    }
+
+    /**
+     * Requests access token from Bonnier Identity Provider using authorization code and PKCE (for client that cannot store a secret)
+     * @param clientId S+ client Id
+     * @param code the code received in authorization code flow
+     * @param redirectURI the redirect uri registered
+     * @param longLivedToken if token is long lived (30d) or not (8h)
+     * @param codeVerifier used for PKCE concept (in case client cannot store a secret)
+     * @return OAuth2Response object
+     * @throws se.bonnier.api.openid.exceptions.BonnierOpenIdException
+     */
+    public OAuth2Response requestAccessTokenWithPKCE(String clientId,
+                                             String code,
+                                             String redirectURI,
                                              Boolean longLivedToken,
                                              String codeVerifier) throws BonnierOpenIdException {
-        OAuth2Response oauthResponse = null;
+        return apiClient.requestAccessTokenFromCodePKCE(clientId, code, redirectURI, longLivedToken, codeVerifier);
+    }
 
-        try {
-            Form form = new Form();
-            form.add("client_id", clientId);
-            form.add("client_secret", clientSecret);
-            form.add("grant_type", "authorization_code");
-            form.add("redirect_uri", redirectURI);
-            form.add("code", code);
-            form.add("long_lived_token",longLivedToken.toString());
-
-            if(codeVerifier != null){
-                form.add("code_verifier", codeVerifier);
-            }
-
-            WebResource.Builder builder = resource.path("/token").accept(MediaType.APPLICATION_JSON);
-            oauthResponse = builder.post(OAuth2Response.class, form);
-        } catch (Exception ex) {
-            OAuth2Response entity = ((UniformInterfaceException) ex).getResponse().getEntity(OAuth2Response.class);
-            switch (entity.errorCode) {
-                case CLIENT_ACTIVATION_PERIOD_EXPIRED:
-                case UNAUTHORIZED:
-                case INVALID_REQUEST:
-                    throw new BonnierOpenIdException(entity.errorMsg);
-                default:
-                    throw new BonnierOpenIdException(ex);
-            }
-        }
-        return oauthResponse;
+    public OAuth2Response refreshAccessToken(String refreshToken, String scope) throws BonnierOpenIdException {
+        return apiClient.refreshAccessToken(refreshToken, scope);
     }
 }
