@@ -1,5 +1,6 @@
 package se.bonnier.api.openid.examples;
 
+import org.codehaus.jettison.json.JSONObject;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -101,6 +102,19 @@ public class AuthorizationCodeFlow {
         }
     }
 
+    private static boolean isLoggedIn() {
+        boolean isLoggedIn = false;
+
+        if(ssoClient.validateAccessToken(accessToken)){
+            LOGGER.debug("User is logged in !");
+            isLoggedIn = true;
+        } else {
+            LOGGER.debug("User is NOT logged in !");
+        }
+
+        return isLoggedIn;
+    }
+
     private static Server initServer() {
         Server server = new Server(localServerPort);
         ContextHandler contextRoot = new ContextHandler("/");
@@ -111,9 +125,11 @@ public class AuthorizationCodeFlow {
         contextLogout.setHandler(new BipLogout());
         ContextHandler contextRefreshToken = new ContextHandler("/bipRefresh");
         contextRefreshToken.setHandler(new BipRefreshToken());
+        ContextHandler contextUserInfo = new ContextHandler("/bipUserInfo");
+        contextUserInfo.setHandler(new BipUserInfo());
 
         ContextHandlerCollection contexts = new ContextHandlerCollection();
-        contexts.setHandlers(new Handler[] { contextRoot, contextBipHandler, contextLogout, contextRefreshToken });
+        contexts.setHandlers(new Handler[] { contextRoot, contextBipHandler, contextLogout, contextRefreshToken, contextUserInfo });
         server.setHandler(contexts);
 
         return server;
@@ -122,11 +138,13 @@ public class AuthorizationCodeFlow {
     public static class RootPage extends AbstractHandler {
         @Override
         public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-            state = SplusUtil.createOpenIdState();
             response.setContentType("text/html; charset=utf-8");
             response.setStatus(HttpServletResponse.SC_OK);
+            baseRequest.setHandled(true);
+
+            state = SplusUtil.createOpenIdState();
             PrintWriter out = response.getWriter();
-            if(accessToken == null) {
+            if(!isLoggedIn()) {
                 String loginUrl = ssoClient.getAuthorizeUrl(authorizationRequestUri, clientId, redirectUri,
                         scope, state, null, null, "sv", null, null);
                 out.println("<h2>Welcome !</h2>");
@@ -136,9 +154,8 @@ public class AuthorizationCodeFlow {
                 out.println("<h2>Welcome " + firstname + " " + lastname + " !</h2>");
                 out.println("<p>You are logged in ! Click <a href='" + logoutUrl + "'>here</a> to logout.</p>");
                 out.println("<p>To refresh token : click <a href='http://localhost:" + localServerPort + "/bipRefresh'>here</a> !</p>");
+                out.println("<p>To check more user info, click <a href='http://localhost:" + localServerPort + "/bipUserInfo'>here</a> !</p>");
             }
-
-            baseRequest.setHandled(true);
         }
     }
 
@@ -149,7 +166,7 @@ public class AuthorizationCodeFlow {
 
             String returnState = request.getParameter("state");
             if (returnState == null || !returnState.equals(state)) {
-                LOGGER.error("Error ! State doesn't match !");
+                LOGGER.error("Error ! State doesn't match ! [state=" + state + "; returnState=" + returnState + "]");
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             } else {
                 String code = request.getParameter("code");
@@ -216,6 +233,7 @@ public class AuthorizationCodeFlow {
                 response.setContentLength(0);
                 response.sendRedirect("http://localhost:" + localServerPort);
             }
+            baseRequest.setHandled(true);
         }
     }
 
@@ -240,6 +258,32 @@ public class AuthorizationCodeFlow {
                 LOGGER.error("Error exception : " + e.getMessage());
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             }
+            baseRequest.setHandled(true);
+        }
+    }
+
+    public static class BipUserInfo extends AbstractHandler {
+        @Override
+        public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+            response.setContentType("text/html; charset=utf-8");
+            try {
+                JSONObject json = ssoClient.getUserInfo(accessToken);
+
+                response.setStatus(HttpServletResponse.SC_OK);
+                PrintWriter out = response.getWriter();
+                out.println("<h1>User info :</h1>");
+                out.println("<p>Bip account ID : " + json.getString("sub") + "</p>");
+                out.println("<p>Email : " + json.getString("email") + "</p>");
+                out.println("<p>Email verified : " + json.getString("email_verified") + "</p>");
+                out.println("<p>Name : " + json.getString("name") + "</p>");
+            } catch (Exception e) {
+                LOGGER.error("Error exception : " + e.getMessage());
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                PrintWriter out = response.getWriter();
+                out.println("<h1>An error occured !</h1>");
+                out.println(e.getStackTrace());
+            }
+            baseRequest.setHandled(true);
         }
     }
 }

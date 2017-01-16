@@ -41,11 +41,13 @@ public class PasswordFlow {
         OAuth2Response response = null;
         BipPasswordFlowClient ssoClient = new BipPasswordFlowClient(endpoint);
         try {
+            //Request access token
             response = ssoClient.requestAccessToken(clientId,
                     scope,
                     username,
                     password,
                     longLivedToken);
+
             LOGGER.debug("Success !");
             LOGGER.debug("Access token : " + response.accessToken);
             LOGGER.debug("Token type : " + response.tokenType);
@@ -53,12 +55,22 @@ public class PasswordFlow {
             LOGGER.debug("Refresh token : " + response.refreshToken);
             LOGGER.debug("Scope : " + response.scope);
 
+            //Verify Id token and claim data
             ClaimsSet claimsSet = ssoClient.verifyIdToken(response.idToken, clientId);
             String accountId = claimsSet.getClaim("sub").toString();
             String firstName = claimsSet.getClaim("given_name").toString();
             String lastName = claimsSet.getClaim("family_name").toString();
-
             LOGGER.debug("ID token : {accountId:" + accountId + ",firstName:" + firstName + ",lastName:" + lastName + "}");
+
+            //validate access token
+            if(ssoClient.validateAccessToken(response.accessToken)) {
+                LOGGER.debug("Validate access token success !");
+
+                //revoke access token
+                ssoClient.revokeAccessToken(response.accessToken);
+            } else {
+                throw new BonnierOpenIdException("Error when validating the access token");
+            }
         } catch(BonnierOpenIdException e) {
             LOGGER.error("Error Bonnier OpenId exception : " + e.getMessage());
             throw new BonnierOpenIdException(e.getMessage());

@@ -1,9 +1,11 @@
 package se.bonnier.api.openid.client;
 
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.representation.Form;
+import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.bonnier.api.openid.entity.ClaimsSet;
@@ -12,12 +14,13 @@ import se.bonnier.api.openid.response.OAuth2Response;
 import se.bonnier.api.openid.util.JwsUtil;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 /**
  * Created by rene on 13/01/17.
  */
 public class ApiClient {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SplusOpenIdClient.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiClient.class);
 
     protected WebResource resource;
     private JwsUtil jwsUtil;
@@ -173,7 +176,45 @@ public class ApiClient {
         return oauthResponse;
     }
 
+    public boolean validateToken(String token) throws BonnierOpenIdException {
+        boolean valid = false;
+        try {
+            WebResource.Builder builder = resource.path("/validate").queryParam("access_token", token).accept(MediaType.APPLICATION_JSON);
+            ClientResponse response = builder.get(ClientResponse.class);
+
+            if (response.getStatus() == Response.Status.OK.getStatusCode()) {
+                valid = true;
+            }
+        } catch (Exception ex) {
+            throw new BonnierOpenIdException(ex);
+        }
+        return valid;
+    }
+
+    public void invalidateAccessToken(String invalidateToken, String accessToken) {
+        Form form = new Form();
+        form.add("invalidate_token", invalidateToken);
+        form.add("access_token", accessToken);
+        WebResource.Builder builder = resource.path("/invalidate").accept(MediaType.APPLICATION_JSON);
+        ClientResponse response = builder.post(ClientResponse.class, form);
+        if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+            LOGGER.debug("Error invalidate token : " + invalidateToken);
+        } else {
+            LOGGER.debug("Success invalidate token : " + invalidateToken);
+        }
+    }
+
     public ClaimsSet verifyIdToken(String idToken, String clientId) {
         return jwsUtil.verifyContent(idToken, clientId, resource.path("/keys").getURI().toString());
+    }
+
+    public JSONObject getUserInfo(String accessToken) {
+        WebResource.Builder builder = resource.path("/userinfo").accept(MediaType.APPLICATION_JSON);
+        builder.header("Authorization", "Bearer " + accessToken);
+        ClientResponse response = builder.get(ClientResponse.class);
+
+        JSONObject json = response.getEntity(JSONObject.class);
+
+        return json;
     }
 }

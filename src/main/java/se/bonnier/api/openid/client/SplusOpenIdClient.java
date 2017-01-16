@@ -1,8 +1,10 @@
 package se.bonnier.api.openid.client;
 
+import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.bonnier.api.openid.entity.ClaimsSet;
+import se.bonnier.api.openid.exceptions.BonnierOpenIdException;
 
 /**
  * @author vietnq
@@ -22,5 +24,21 @@ public abstract class SplusOpenIdClient {
 
     public ClaimsSet verifyIdToken(String idToken, String clientId) {
         return apiClient.verifyIdToken(idToken, clientId);
+    }
+
+    public boolean validateAccessToken(String token) throws BonnierOpenIdException {
+        if (token != null) {
+            return apiClient.validateToken(token);
+        } else {
+            return false;
+        }
+    }
+
+    public void revokeAccessToken(String token) {
+        apiClient.invalidateAccessToken(token, token);
+    }
+
+    public JSONObject getUserInfo(String accessToken) {
+        return apiClient.getUserInfo(accessToken);
     }
 }
