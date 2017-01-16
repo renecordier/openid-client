@@ -28,4 +28,8 @@ public class BipPasswordFlowClient extends SplusOpenIdClient {
                                              Boolean longLivedToken) throws BonnierOpenIdException {
         return apiClient.requestAccessTokenWithPassword(clientId, scope, username, password, longLivedToken);
     }
+
+    public void revokeAccessToken(String token, String clientId) {
+        apiClient.revokeToken(token, clientId, null);
+    }
 }

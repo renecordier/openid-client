@@ -276,6 +276,7 @@ public class AuthorizationCodeFlow {
                 out.println("<p>Email : " + json.getString("email") + "</p>");
                 out.println("<p>Email verified : " + json.getString("email_verified") + "</p>");
                 out.println("<p>Name : " + json.getString("name") + "</p>");
+                out.println("<p>Back to <a href='http://localhost:" + localServerPort + "'>main page</a> !");
             } catch (Exception e) {
                 LOGGER.error("Error exception : " + e.getMessage());
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);

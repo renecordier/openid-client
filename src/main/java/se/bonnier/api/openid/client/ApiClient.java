@@ -204,6 +204,29 @@ public class ApiClient {
         }
     }
 
+    public void revokeToken(String token, String clientId, String clientSecret) {
+        Form form = new Form();
+        form.add("token", token);
+        form.add("token_type_hint", "access_token");
+
+        WebResource.Builder builder = resource.path("/revoke").accept(MediaType.APPLICATION_JSON);
+        if(clientId == null && clientSecret == null) {
+            builder.header("Authorization", "Bearer " + accessToken());
+        } else {
+            form.add("client_id", clientId);
+            if(clientSecret != null) {
+                form.add("client_secret", clientSecret);
+            }
+        }
+
+        ClientResponse response = builder.post(ClientResponse.class, form);
+        if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+            LOGGER.debug("Error revoke token : " + token);
+        } else {
+            LOGGER.debug("Success revoke token : " + token);
+        }
+    }
+
     public ClaimsSet verifyIdToken(String idToken, String clientId) {
         return jwsUtil.verifyContent(idToken, clientId, resource.path("/keys").getURI().toString());
     }
@@ -217,4 +240,6 @@ public class ApiClient {
 
         return json;
     }
+
+
 }

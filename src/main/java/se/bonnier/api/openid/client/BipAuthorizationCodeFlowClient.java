@@ -76,4 +76,12 @@ public class BipAuthorizationCodeFlowClient extends SplusOpenIdClient {
     public OAuth2Response refreshAccessToken(String refreshToken, String scope) throws BonnierOpenIdException {
         return apiClient.refreshAccessToken(refreshToken, scope);
     }
+
+    public void revokeAccessToken(String token) {
+        revokeAccessToken(token, null, null);
+    }
+
+    public void revokeAccessToken(String token, String clientId, String clientSecret) {
+        apiClient.revokeToken(token, clientId, clientSecret);
+    }
 }

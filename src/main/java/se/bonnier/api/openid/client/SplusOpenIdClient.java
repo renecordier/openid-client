@@ -34,10 +34,6 @@ public abstract class SplusOpenIdClient {
         }
     }
 
-    public void revokeAccessToken(String token) {
-        apiClient.invalidateAccessToken(token, token);
-    }
-
     public JSONObject getUserInfo(String accessToken) {
         return apiClient.getUserInfo(accessToken);
     }

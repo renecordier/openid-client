@@ -67,7 +67,7 @@ public class PasswordFlow {
                 LOGGER.debug("Validate access token success !");
 
                 //revoke access token
-                ssoClient.revokeAccessToken(response.accessToken);
+                ssoClient.revokeAccessToken(response.accessToken, clientId);
             } else {
                 throw new BonnierOpenIdException("Error when validating the access token");
             }
