@@ -59,13 +59,17 @@ public class AuthorizationCodeFlow {
         clientSecret = props.getProperty("bip.client.secret");
         redirectUri = props.getProperty("bip.redirect.uri");
         postLogoutRedirectUri = props.getProperty("bip.post.logout.redirect.uri");
-        authorizationRequestUri = props.getProperty("bip.authorization.request.uri");
-        logoutRequestUri = props.getProperty("bip.logout.request.uri");
 
         accountId = "74SiK5PSzADFjeZ0CXJWTM";
         scope = "openid email profile appId:di.se";
 
         accessToken = firstname = lastname = refreshToken = null;
+
+        //Example on using discovery endpoint
+        String discoveryUrl = props.getProperty("bip.discovery.endpoint");
+        JSONObject jsonDiscoveryConfig = BipAuthorizationCodeFlowClient.getOpenIdConfiguration(discoveryUrl);
+        authorizationRequestUri = jsonDiscoveryConfig.getString("authorization_endpoint");
+        logoutRequestUri = jsonDiscoveryConfig.getString("end_session_endpoint");
 
         if(clientId.equals("ENTER_HERE") || clientSecret.equals("ENTER_HERE")) {
             LOGGER.error("Please fill the needed values in the configuration file (src/main/resources/authorizationcodeflow.conf) given by S+ team after " +
