@@ -66,9 +66,7 @@ public class AuthorizationCodeFlow {
         postLogoutRedirectUri = props.getProperty("bip.post.logout.redirect.uri");
         isPublicClient = Boolean.parseBoolean(props.getProperty("bip.client.is.public"));
 
-        accountId = "74SiK5PSzADFjeZ0CXJWTM";
         scope = "openid email profile appId:di.se";
-
         accessToken = firstname = lastname = refreshToken = null;
 
         //Example on using discovery endpoint
