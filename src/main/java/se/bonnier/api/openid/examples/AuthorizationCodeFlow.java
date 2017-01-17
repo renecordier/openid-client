@@ -24,6 +24,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Properties;
+import java.util.UUID;
 
 /**
  * Created by rene on 20/12/16.
@@ -34,6 +35,10 @@ public class AuthorizationCodeFlow {
     private static final Properties props = new Properties();
     private static final String fileName = "authorizationcodeflow.conf";
     private static final int localServerPort = 9090;
+    private static boolean isPublicClient;
+    private static final String codeChallengeMethod = "plain";
+
+    private static String codeChallenge;
 
     private static BipAuthorizationCodeFlowClient ssoClient;
     private static String authorizationRequestUri;
@@ -59,6 +64,7 @@ public class AuthorizationCodeFlow {
         clientSecret = props.getProperty("bip.client.secret");
         redirectUri = props.getProperty("bip.redirect.uri");
         postLogoutRedirectUri = props.getProperty("bip.post.logout.redirect.uri");
+        isPublicClient = Boolean.parseBoolean(props.getProperty("bip.client.is.public"));
 
         accountId = "74SiK5PSzADFjeZ0CXJWTM";
         scope = "openid email profile appId:di.se";
@@ -149,8 +155,13 @@ public class AuthorizationCodeFlow {
             state = SplusUtil.createOpenIdState();
             PrintWriter out = response.getWriter();
             if(!isLoggedIn()) {
+                if(isPublicClient) {
+                    codeChallenge = UUID.randomUUID().toString();
+                }
                 String loginUrl = ssoClient.getAuthorizeUrl(authorizationRequestUri, clientId, redirectUri,
-                        scope, state, null, null, "sv", null, null);
+                        scope, state, null, null, "sv", null, null,
+                        codeChallenge, isPublicClient ? codeChallengeMethod : null);
+
                 out.println("<h2>Welcome !</h2>");
                 out.println("<p>You are not logged in yet ! Please click <a href='" + loginUrl + "'>here</a> to login</p>");
             } else {
@@ -182,11 +193,20 @@ public class AuthorizationCodeFlow {
                             longLivedToken = true;
                         }
 
-                        OAuth2Response result = ssoClient.requestAccessToken(clientId,
-                                clientSecret,
-                                code,
-                                redirectUri,
-                                longLivedToken);
+                        OAuth2Response result;
+                        if(isPublicClient) {
+                            result = ssoClient.requestAccessTokenWithPKCE(clientId,
+                                    code,
+                                    redirectUri,
+                                    longLivedToken,
+                                    codeChallenge);
+                        } else {
+                            result = ssoClient.requestAccessToken(clientId,
+                                    clientSecret,
+                                    code,
+                                    redirectUri,
+                                    longLivedToken);
+                        }
 
                         LOGGER.debug("Success getting access token : " + result.accessToken);
                         LOGGER.debug("Token type : " + result.tokenType);
@@ -247,7 +267,12 @@ public class AuthorizationCodeFlow {
             LOGGER.info("Init refresh token !");
 
             try {
-                OAuth2Response oauth2Response = ssoClient.refreshAccessToken(refreshToken, null);
+                OAuth2Response oauth2Response;
+                if(isPublicClient) {
+                    oauth2Response = ssoClient.refreshPublicAccessToken(refreshToken, null, clientId);
+                } else {
+                    oauth2Response = ssoClient.refreshAccessToken(refreshToken, null);
+                }
                 accessToken = oauth2Response.accessToken;
 
                 LOGGER.debug("Success refreshing to new access token : " + oauth2Response.accessToken);

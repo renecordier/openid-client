@@ -13,7 +13,7 @@ public class BipAuthorizationCodeFlowClient extends SplusOpenIdClient {
     }
 
     public String getAuthorizeUrl(String authorizationRequestUri, String clientId, String redirectUri, String scope, String state,
-                                  String nonce, String display, String lc, String loginHint, String cancelUri) {
+                                  String nonce, String display, String lc, String loginHint, String cancelUri, String codeChallenge, String codeChallengeMethod) {
         String url = authorizationRequestUri + "?response_type=code";
         url += "&client_id=" + clientId;
         url += "&redirect_uri=" + redirectUri;
@@ -22,8 +22,10 @@ public class BipAuthorizationCodeFlowClient extends SplusOpenIdClient {
         url += nonce != null ? "&nonce=" + nonce : "";
         url += display != null ? "&display=" + display : "";
         url += lc != null ? "&lc=" + lc : "";
-        url += loginHint != null ? "&loginHint=" + loginHint : "";
-        url += cancelUri != null ? "&cancelUri=" + cancelUri : "";
+        url += loginHint != null ? "&login_hint=" + loginHint : "";
+        url += cancelUri != null ? "&cancel_uri=" + cancelUri : "";
+        url += codeChallenge != null ? "&code_challenge=" + codeChallenge : "";
+        url += codeChallengeMethod != null ? "&code_challenge_method=" + codeChallengeMethod : "";
 
         return url;
     }
@@ -74,7 +76,15 @@ public class BipAuthorizationCodeFlowClient extends SplusOpenIdClient {
     }
 
     public OAuth2Response refreshAccessToken(String refreshToken, String scope) throws BonnierOpenIdException {
-        return apiClient.refreshAccessToken(refreshToken, scope);
+        return refreshAccessToken(refreshToken, scope, null, null);
+    }
+
+    public OAuth2Response refreshAccessToken(String refreshToken, String scope, String clientId, String clientSecret) throws BonnierOpenIdException {
+        return apiClient.refreshAccessToken(refreshToken, scope, clientId, clientSecret);
+    }
+
+    public OAuth2Response refreshPublicAccessToken(String refreshToken, String scope, String clientId) throws BonnierOpenIdException {
+        return apiClient.refreshAccessToken(refreshToken, scope, clientId, null);
     }
 
     public void revokeAccessToken(String token) {

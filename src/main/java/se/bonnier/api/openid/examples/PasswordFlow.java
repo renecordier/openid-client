@@ -62,6 +62,10 @@ public class PasswordFlow {
             String lastName = claimsSet.getClaim("family_name").toString();
             LOGGER.debug("ID token : {accountId:" + accountId + ",firstName:" + firstName + ",lastName:" + lastName + "}");
 
+            //refresh access token
+            response = ssoClient.refreshPublicAccessToken(response.refreshToken, null, clientId);
+            LOGGER.debug("Success refreshing token ! New access token : " + response.accessToken);
+
             //validate access token
             if(ssoClient.validateAccessToken(response.accessToken)) {
                 LOGGER.debug("Validate access token success !");

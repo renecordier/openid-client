@@ -146,7 +146,7 @@ public class ApiClient {
         return oauthResponse;
     }
 
-    public OAuth2Response refreshAccessToken(String refreshToken, String scope) throws BonnierOpenIdException {
+    public OAuth2Response refreshAccessToken(String refreshToken, String scope, String clientId, String clientSecret) throws BonnierOpenIdException {
         OAuth2Response oauthResponse = null;
 
         try {
@@ -156,9 +156,17 @@ public class ApiClient {
             if (scope != null) {
                 form.add("scope", scope);
             }
+            if (clientId != null) {
+                form.add("client_id", clientId);
+            }
+            if (clientSecret != null) {
+                form.add("client_secret", clientId);
+            }
 
             WebResource.Builder builder = resource.path("/token").accept(MediaType.APPLICATION_JSON);
-            builder.header("Authorization", "Bearer " + accessToken());
+            if(clientId == null && clientSecret == null) {
+                builder.header("Authorization", "Bearer " + accessToken());
+            }
             oauthResponse = builder.post(OAuth2Response.class, form);
         } catch (Exception ex) {
             OAuth2Response entity = ((UniformInterfaceException) ex).getResponse().getEntity(OAuth2Response.class);
