@@ -1,5 +1,6 @@
 package se.bonnier.api.openid.examples;
 
+import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jettison.json.JSONObject;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import se.bonnier.api.openid.client.BipAuthorizationCodeFlowClient;
 import se.bonnier.api.openid.entity.ClaimsSet;
 import se.bonnier.api.openid.entity.Customer;
+import se.bonnier.api.openid.entity.DiscoveryData;
 import se.bonnier.api.openid.entity.OAuthAuthorizationRequestAccessType;
 import se.bonnier.api.openid.exceptions.BonnierOpenIdException;
 import se.bonnier.api.openid.response.OAuth2Response;
@@ -71,11 +73,17 @@ public class AuthorizationCodeFlow {
         cleanLoginSession();
 
         //Example on using discovery endpoint
-        String discoveryUrl = props.getProperty("bip.discovery.endpoint");
-        JSONObject jsonDiscoveryConfig = BipAuthorizationCodeFlowClient.getOpenIdConfiguration(discoveryUrl);
-        bipUrl = jsonDiscoveryConfig.getString("issuer");
-        authorizationRequestUri = jsonDiscoveryConfig.getString("authorization_endpoint");
-        logoutRequestUri = jsonDiscoveryConfig.getString("end_session_endpoint");
+        JSONObject jsonDiscoveryConfig = BipAuthorizationCodeFlowClient.getOpenIdConfiguration(props.getProperty("bip.discovery.endpoint"));
+        DiscoveryData discovery = new ObjectMapper().readValue(jsonDiscoveryConfig.toString(), DiscoveryData.class);
+
+        LOGGER.debug("Bip discovery : {issuer:" + discovery.getIssuer() + ", authorization_endpoint:" + discovery.getAuthorizationEndpoint() +
+                ", token_endpoint:" + discovery.getTokenEndpoint() + ", userinfo_endpoint:" + discovery.getUserinfoEndpoint() + ", revocation_endpoint:" +
+                discovery.getRevocationEndpoint() + ", check_session_iframe:" + discovery.getCheckSessionIframe() + ", end_session_endpoint:" + discovery.getEndSessionEndpoint() +
+                ", jwks_uri:" + discovery.getJwksUri() + "}");
+
+        bipUrl = discovery.getIssuer();
+        authorizationRequestUri = discovery.getAuthorizationEndpoint();
+        logoutRequestUri = discovery.getEndSessionEndpoint();
 
         if(clientId.equals("ENTER_HERE") || clientSecret.equals("ENTER_HERE")) {
             LOGGER.error("Please fill the needed values in the configuration file (src/main/resources/authorizationcodeflow.conf) given by S+ team after " +
@@ -149,6 +157,7 @@ public class AuthorizationCodeFlow {
             baseRequest.setHandled(true);
 
             state = SplusUtil.createOpenIdState();
+            LOGGER.debug("State created : " + state);
             PrintWriter out = response.getWriter();
             out.println("<!DOCTYPE html>");
             out.println("<head><script type=\"text/javascript\" src=\"" + bipUrl + "/assets/bip-client.js\"></script></head>");
@@ -163,14 +172,16 @@ public class AuthorizationCodeFlow {
                 if(isPublicClient) {
                     codeChallenge = UUID.randomUUID().toString();
                 }
-                out.println("<h2>Welcome !</h2>");
-                out.println("<p>You are not logged in yet ! Please click <a id='login-link' href='" + loginUrl + "'>here</a> to login</p>");
+                out.println("<h2>Welcome <span id='name'></span> !</h2>");
+                out.println("<p><span id='logged-in'>You are not logged in yet</span> ! Click <a id='login-link' href='" + loginUrl + "'>login</a>.</p>");
             } else {
-                out.println("<h2>Welcome " + customer.getFirstname() + " " + customer.getLastname() + " !</h2>");
-                out.println("<p>You are logged in ! Click <a id='login-link' href='" + logoutUrl + "'>here</a> to logout.</p>");
-                out.println("<p>To refresh token : click <a href='http://localhost:" + localServerPort + "/bipRefresh'>here</a> !</p>");
-                out.println("<p>To check more user info, click <a href='http://localhost:" + localServerPort + "/bipUserInfo'>here</a> !</p>");
+                out.println("<h2>Welcome <span id='name'>" + customer.getFirstname() + " " + customer.getLastname() + "</span> !</h2>");
+                out.println("<p><span id='logged-in'>You are logged in</span> ! Click <a id='login-link' href='" + logoutUrl + "'>logout</a>.</p>");
             }
+            out.println("<div id='options-block'" + (isLoggedIn() ? "" : "display='none'") + ">");
+            out.println("<p>To refresh token : click <a href='http://localhost:" + localServerPort + "/bipRefresh'>here</a> !</p>");
+            out.println("<p>To check more user info, click <a href='http://localhost:" + localServerPort + "/bipUserInfo'>here</a> !</p>");
+            out.println("</div>");
             bipSessionManagementJs(out, loginUrl, logoutUrl);
             out.println("</body>");
         }
@@ -184,12 +195,21 @@ public class AuthorizationCodeFlow {
                 "        var loginUrl =\"" + loginUrl + "\";\n" +
                 "        var data = JSON.parse(e.data);\n" +
                 "        var loginlink = document.getElementById('login-link');\n" +
+                "        var optionsBlock = document.getElementById('options-block');\n" +
+                "        var loggedIn = document.getElementById('logged-in');\n" +
+                "        var name = document.getElementById('name');\n" +
                 "        if('true'== data.IsLoggedIn){\n" +
                 "           loginlink.setAttribute('href',logoutUrl);\n" +
                 "           loginlink.innerHTML = 'logout';\n" +
+                "           optionsBlock.style.visibility='visible';\n" +
+                "           loggedIn.innerHTML = 'You are logged in';\n" +
+                "           name.innerHTML = data.firstName + ' ' + data.lastName;\n" +
                 "        }else{\n" +
                 "           loginlink.setAttribute('href',loginUrl);\n" +
                 "           loginlink.innerHTML = 'login';\n" +
+                "           optionsBlock.style.visibility='hidden';\n" +
+                "           loggedIn.innerHTML = 'You are not logged in yet';\n" +
+                "           name.innerHTML = '';\n" +
                 "        }\n" +
                 "    }\n" +
                 "    Bip.initialize({'op':'" + bipUrl + "/bip/check_session_iframe',\n" +
@@ -420,7 +440,8 @@ public class AuthorizationCodeFlow {
                 if(customer != null && jsonCallback != null){
                     if(customer.getEmail() != null) {
                         LOGGER.info("User already logged in");
-                        response.getWriter().println(jsonCallback + "({\"IsLoggedIn\":\"true\",\"email\":\"" + customer.getEmail() + "\"})");
+                        response.getWriter().println(jsonCallback + "({\"IsLoggedIn\":\"true\",\"firstName\":\"" + customer.getFirstname()
+                                + "\",\"lastName\":\"" + customer.getLastname() + "\"})");
                         baseRequest.setHandled(true);
                         return;
                     }
@@ -450,7 +471,8 @@ public class AuthorizationCodeFlow {
                             + ",lastName:" + customer.getLastname() + ", email:" + customer.getEmail() + "}");
 
                     if (jsonCallback != null) {
-                        response.getWriter().println(jsonCallback + "({\"IsLoggedIn\":\"true\",\"email\":\"" + customer.getEmail() + "\"})");
+                        response.getWriter().println(jsonCallback + "({\"IsLoggedIn\":\"true\",\"firstName\":\"" + customer.getFirstname()
+                                + "\",\"lastName\":\"" + customer.getLastname() + "\"})");
                         baseRequest.setHandled(true);
                         return;
                     }
