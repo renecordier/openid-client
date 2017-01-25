@@ -40,9 +40,9 @@ public class AuthorizationCodeFlow {
     private static final Properties props = new Properties();
     private static final String fileName = "authorizationcodeflow.conf";
     private static final int localServerPort = 9090;
+
     private static boolean isPublicClient;
     private static final String codeChallengeMethod = "plain";
-
     private static String codeChallenge;
 
     private static BipAuthorizationCodeFlowClient ssoClient;
